@@ -43,12 +43,14 @@ class StripeCanonicalizationTests(unittest.TestCase):
         rows = merge_evidence(from_stripe_signal(signal) for signal in signals)
         snapshot = jarvis_snapshot(rows, source_commit='test', generated_at='2026-09-10T18:40:00Z')
 
+        self.assertEqual(snapshot['metrics']['source_signal_references'], 2)
+        self.assertEqual(snapshot['metrics']['duplicate_source_signals_collapsed'], 1)
         self.assertEqual(snapshot['metrics']['canonical_opportunities'], 1)
         self.assertEqual(snapshot['metrics']['ready_recovery_opportunities'], 0)
         self.assertEqual(snapshot['metrics']['suppressed_opportunities'], 1)
         self.assertEqual(snapshot['metrics']['recoverable_value_identified'], 0.0)
         self.assertEqual(snapshot['metrics']['verified_recovered_revenue'], 0.0)
-        self.assertEqual(snapshot['suppression_counts'], {'missing_customer_identity': 1})
+        self.assertTrue(snapshot['truth_rules']['source_signals_are_not_canonical_opportunities'])
 
 
 if __name__ == '__main__':
