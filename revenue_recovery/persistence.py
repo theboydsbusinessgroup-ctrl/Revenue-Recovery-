@@ -1,7 +1,9 @@
 from __future__ import annotations
+import json
 import sqlite3
 from pathlib import Path
 from .actions import ContactHistory
+from .ledger import CanonicalOpportunity
 
 class RecoveryStore:
     def __init__(self, path: str | Path = 'recovery_state.sqlite3'):
@@ -29,6 +31,15 @@ class RecoveryStore:
                 status TEXT NOT NULL,
                 created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
             )''')
+            db.execute('''CREATE TABLE IF NOT EXISTS canonical_opportunities(
+                opportunity_id TEXT PRIMARY KEY,
+                identity_key TEXT NOT NULL,
+                recoverable INTEGER NOT NULL,
+                recoverable_value REAL NOT NULL,
+                currency TEXT NOT NULL,
+                payload_json TEXT NOT NULL,
+                updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+            )''')
 
     def get_history(self, quote_id: str) -> ContactHistory:
         with self._connect() as db:
@@ -53,3 +64,15 @@ class RecoveryStore:
         with self._connect() as db:
             row=db.execute('SELECT provider_draft_id,status FROM recovery_drafts WHERE opportunity_id=?',(opportunity_id,)).fetchone()
         return {'provider_draft_id':row[0],'status':row[1]} if row else None
+
+    def save_canonical_opportunity(self, opportunity: CanonicalOpportunity) -> None:
+        payload = json.dumps(opportunity.as_dict(), sort_keys=True)
+        with self._connect() as db:
+            db.execute('''INSERT INTO canonical_opportunities(opportunity_id,identity_key,recoverable,recoverable_value,currency,payload_json)
+                VALUES(?,?,?,?,?,?) ON CONFLICT(opportunity_id) DO UPDATE SET identity_key=excluded.identity_key,recoverable=excluded.recoverable,recoverable_value=excluded.recoverable_value,currency=excluded.currency,payload_json=excluded.payload_json,updated_at=CURRENT_TIMESTAMP''',
+                (opportunity.opportunity_id, opportunity.identity_key, 1 if opportunity.recoverable else 0, opportunity.recoverable_value_identified, opportunity.currency, payload))
+
+    def load_canonical_opportunities(self) -> list[dict]:
+        with self._connect() as db:
+            rows = db.execute('SELECT payload_json FROM canonical_opportunities ORDER BY recoverable DESC,recoverable_value DESC').fetchall()
+        return [json.loads(r[0]) for r in rows]
