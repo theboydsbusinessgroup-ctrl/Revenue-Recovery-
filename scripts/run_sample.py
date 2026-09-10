@@ -1,7 +1,13 @@
 #!/usr/bin/env python3
+from pathlib import Path
+import sys
+import json
+
+ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROOT))
+
 from revenue_recovery.engine import analyze
 from revenue_recovery.models import QuoteRecord
-import json
 
 records = [
     QuoteRecord("Q-1001","C-1",1800,21,14,"quoted",True,False,False,2,"fixture:Q-1001"),
