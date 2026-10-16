@@ -1,6 +1,7 @@
 from __future__ import annotations
 import csv
 import io
+import math
 from dataclasses import dataclass, asdict
 from typing import Iterable
 from .models import QuoteRecord
@@ -56,16 +57,17 @@ def _bool(value:str|None, default:bool)->bool:
 
 def _int(value:str|None, default:int=0)->int:
  if value is None or str(value).strip()=="": return default
- x=int(float(str(value).strip()))
- if x<0: raise ValueError("negative_integer")
- return x
+ x=float(str(value).strip())
+ if not math.isfinite(x) or x<0 or not x.is_integer():
+  raise ValueError("invalid_nonnegative_integer")
+ return int(x)
 
 
 def _money(value:str|None)->float:
  if value is None: raise ValueError("missing_value")
  cleaned=str(value).strip().replace("$","").replace(",","")
  x=float(cleaned)
- if x<0: raise ValueError("negative_value")
+ if not math.isfinite(x) or x<0: raise ValueError("invalid_value")
  return round(x,2)
 
 
