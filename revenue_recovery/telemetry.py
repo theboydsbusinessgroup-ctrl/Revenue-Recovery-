@@ -8,8 +8,8 @@ def jarvis_snapshot(opportunities: list[CanonicalOpportunity], *, source_commit:
     generated_at = generated_at or datetime.now(timezone.utc).isoformat().replace('+00:00','Z')
     actionable = [o for o in opportunities if o.recoverable]
     suppressed = [o for o in opportunities if not o.recoverable]
-    currencies = {o.currency for o in actionable if o.currency and o.currency != 'MIXED'}
-    value = round(sum(o.recoverable_value_identified for o in actionable), 2) if len(currencies) <= 1 else None
+    currencies = {o.currency for o in actionable}
+    value = round(sum(o.recoverable_value_identified for o in actionable), 2) if len(currencies) <= 1 and 'MIXED' not in currencies else None
     source_signal_references = sum(len(o.source_refs) for o in opportunities)
     duplicate_source_signals_collapsed = max(0, source_signal_references - len(opportunities))
     reasons: dict[str, int] = {}

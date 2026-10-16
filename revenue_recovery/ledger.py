@@ -3,6 +3,12 @@ from dataclasses import dataclass, field, asdict
 from hashlib import sha256
 from typing import Any, Iterable
 
+CONTACT_SUPPRESSIONS = {
+    'customer_opted_out', 'negative_reply', 'no_permitted_contact_channel',
+    'contact_frequency_limit', 'recent_contact_frequency_gate',
+    'max_recovery_attempts_reached',
+}
+
 @dataclass
 class EvidenceRef:
     source_type: str
@@ -70,7 +76,9 @@ def merge_evidence(refs: Iterable[EvidenceRef]) -> list[CanonicalOpportunity]:
         customer_ids = sorted({i.customer_id for i in items if i.customer_id})
         suppressions = sorted({i.suppression_reason for i in items if i.suppression_reason})
         evidence = sorted({e for i in items for e in i.evidence})
-        recoverable = any(i.recoverable for i in items) and not all(i.suppression_reason for i in items)
+        recoverable = (any(i.recoverable for i in items)
+                       and not all(i.suppression_reason for i in items)
+                       and not CONTACT_SUPPRESSIONS.intersection(suppressions))
         opportunities.append(CanonicalOpportunity(
             opportunity_id=_opportunity_id(identity_key),
             identity_key=identity_key,
@@ -88,8 +96,8 @@ def merge_evidence(refs: Iterable[EvidenceRef]) -> list[CanonicalOpportunity]:
 
 def summarize(opportunities: list[CanonicalOpportunity]) -> dict[str, Any]:
     actionable = [o for o in opportunities if o.recoverable]
-    currencies = {o.currency for o in actionable if o.currency != "MIXED"}
-    total = round(sum(o.recoverable_value_identified for o in actionable), 2) if len(currencies) <= 1 else None
+    currencies = {o.currency for o in actionable}
+    total = round(sum(o.recoverable_value_identified for o in actionable), 2) if len(currencies) <= 1 and "MIXED" not in currencies else None
     return {
         "canonical_opportunities": len(opportunities),
         "actionable_opportunities": len(actionable),

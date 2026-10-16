@@ -12,3 +12,14 @@ A live invoice may become a recovery signal only when it is open or uncollectibl
 The connected Stripe account currently has no open or uncollectible invoices. It has two live-mode $100 PaymentIntents in `requires_payment_method`, both with booking metadata but no customer, receipt email, payment method, charge, or payment error. They are preserved as authoritative signals but suppressed from recovery outreach.
 
 Recoverable value is never reported as recovered revenue until a downstream successful payment event verifies it.
+# Currency scope
+
+Stripe ingestion currently accepts USD only. Missing or other currencies raise
+`ValueError` before an opportunity is created, including zero-decimal currencies
+such as JPY and three-decimal currencies such as KWD. Add verified Stripe
+minor-unit conversion rules and currency-specific ledgers before expanding this
+scope. Negative, fractional-minor-unit and non-finite amounts are rejected.
+
+Raw signal summaries expose `amounts_by_currency`; their combined amount is
+`null` and currency is `MIXED` when multiple currencies are present. Canonical
+ledger and Jarvis telemetry also keep mixed-currency combined amounts `null`.
